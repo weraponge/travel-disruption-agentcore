@@ -16,7 +16,7 @@ cdk-demo/lib/           # compiled JS output
 cdk-demo/outputs.json
 
 # Diagram output (regenerate with: awsdac travel-disruption-agentcore.yaml)
-travel-disruption-agentcore.png
+
 
 # IDE
 .idea/
