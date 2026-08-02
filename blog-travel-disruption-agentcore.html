@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Build an autonomous travel disruption agent with Amazon Bedrock AgentCore harness</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Amazon Ember", "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #0d1117;
+      background: #fff;
+    }
+    a { color: #0073bb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Top nav bar ── */
+    .aws-nav {
+      background: #232f3e;
+      padding: 0 24px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .aws-nav .logo {
+      color: #ff9900;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 1px;
+    }
+    .aws-nav .nav-link {
+      color: #d5dbdb;
+      font-size: 13px;
+    }
+    .aws-nav .nav-link:hover { color: #ff9900; text-decoration: none; }
+
+    /* ── Blog breadcrumb bar ── */
+    .breadcrumb-bar {
+      background: #f8f8f8;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 8px 24px;
+      font-size: 13px;
+      color: #666;
+    }
+    .breadcrumb-bar a { color: #0073bb; }
+
+    /* ── Blog category header ── */
+    .category-header {
+      background: #232f3e;
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .category-header a { color: #ff9900; }
+
+    /* ── Page layout ── */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ── Post header ── */
+    .post-header { margin-bottom: 32px; }
+    .post-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: #0d1117;
+      margin-bottom: 16px;
+    }
+    .post-meta {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+    .post-meta strong { color: #0d1117; }
+    .post-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .tag {
+      display: inline-block;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: #0073bb;
+    }
+    .tag:hover { background: #e0f0ff; }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      border-top: 1px solid #e8e8e8;
+      margin: 36px 0;
+    }
+
+    /* ── Body typography ── */
+    .post-body p { margin-bottom: 18px; }
+    .post-body h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0d1117;
+      margin: 40px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #ff9900;
+    }
+    .post-body h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0d1117;
+      margin: 28px 0 12px;
+    }
+    .post-body ol, .post-body ul {
+      margin: 0 0 18px 24px;
+    }
+    .post-body li { margin-bottom: 8px; }
+    .post-body strong { font-weight: 600; }
+
+    /* ── Inline code ── */
+    code {
+      background: #f4f4f4;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 14px;
+      color: #c7254e;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #1e1e1e;
+      border-radius: 6px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 20px 0 28px;
+      position: relative;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #d4d4d4;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13.5px;
+      line-height: 1.6;
+      white-space: pre;
+    }
+    /* Syntax highlight tokens */
+    .kw  { color: #569cd6; }   /* keyword */
+    .str { color: #ce9178; }   /* string */
+    .cm  { color: #6a9955; }   /* comment */
+    .fn  { color: #dcdcaa; }   /* function */
+    .num { color: #b5cea8; }   /* number */
+    .var { color: #9cdcfe; }   /* variable */
+    .op  { color: #d4d4d4; }   /* operator */
+
+    /* Language label */
+    pre::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 11px;
+      color: #888;
+      font-family: sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Note / callout box ── */
+    .callout {
+      background: #f0f7ff;
+      border-left: 4px solid #0073bb;
+      padding: 14px 18px;
+      margin: 20px 0 28px;
+      border-radius: 0 4px 4px 0;
+      font-size: 14.5px;
+    }
+    .callout strong { color: #0073bb; }
+
+    /* ── Architecture diagram ── */
+    .diagram-wrap {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .diagram-wrap img {
+      max-width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    .diagram-caption {
+      font-size: 13px;
+      color: #666;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* ── Author section ── */
+    .author-section {
+      border-top: 2px solid #232f3e;
+      margin-top: 60px;
+      padding-top: 32px;
+    }
+    .author-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #232f3e;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .author-card {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+    .author-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #232f3e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff9900;
+      font-size: 28px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .author-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .author-info p  { font-size: 14px; color: #444; line-height: 1.6; }
+
+    /* ── Footer ── */
+    .site-footer {
+      background: #232f3e;
+      color: #aaa;
+      font-size: 13px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 80px;
+    }
+    .site-footer a { color: #ff9900; }
+  </style>
+</head>
+<body>
+
+<!-- Top nav -->
+<nav class="aws-nav">
+  <span class="logo">AWS</span>
+  <a class="nav-link" href="https://aws.amazon.com/blogs/">Blogs</a>
+  <a class="nav-link" href="https://aws.amazon.com/blogs/machine-learning/">Machine Learning</a>
+</nav>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-bar">
+  <a href="https://aws.amazon.com/blogs/">AWS Blog</a> &rsaquo;
+  <a href="https://aws.amazon.com/blogs/machine-learning/">Artificial Intelligence</a> &rsaquo;
+  Build an autonomous travel disruption agent with Amazon Bedrock AgentCore harness
+</div>
+
+<!-- Category label -->
+<div class="category-header">
+  <a href="https://aws.amazon.com/blogs/machine-learning/">Artificial Intelligence</a>
+</div>
+
+<!-- Main content -->
+<div class="page-wrapper">
+  <article>
+
+    <!-- Post header -->
+    <header class="post-header">
+      <h1>Build an autonomous travel disruption agent with Amazon Bedrock AgentCore harness</h1>
+      <div class="post-meta">
+        by <strong>Your Name</strong> &nbsp;|&nbsp; [DATE] &nbsp;|&nbsp;
+        <a href="#">Advanced (300)</a>
+      </div>
+      <div class="post-tags">
+        <a class="tag" href="#">Amazon Bedrock</a>
+        <a class="tag" href="#">Amazon Bedrock AgentCore</a>
+        <a class="tag" href="#">Amazon DynamoDB</a>
+        <a class="tag" href="#">Amazon EventBridge</a>
+        <a class="tag" href="#">AWS Step Functions</a>
+        <a class="tag" href="#">Serverless</a>
+        <a class="tag" href="#">Technical How-to</a>
+        <a class="tag" href="#">Travel &amp; Hospitality</a>
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      <!-- Intro -->
+      <p>
+        Every day, tens of thousands of flights are cancelled or delayed. Each disruption triggers
+        a manual cascade: gate agents rebook passengers one by one, hotel rooms are arranged over
+        the phone, compensation vouchers are calculated by hand. The average resolution time exceeds
+        45 minutes per passenger. At scale, this is an operational crisis.
+      </p>
+      <p>
+        <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html">Amazon Bedrock AgentCore harness</a>
+        turns that cascade into a configuration problem. You declare what the agent does &mdash;
+        which model, which tools, what memory &mdash; and the harness runs it in a stateful,
+        isolated microVM with built-in session persistence, secure tool connectivity, and
+        end-to-end observability. No orchestration loop to write. No container to manage.
+      </p>
+      <p>
+        This post walks through building an autonomous travel disruption agent that detects a
+        flight cancellation, recovers every affected passenger in parallel, and delivers a resolved
+        itinerary in under 10 seconds. The agent handles flight rebooking, hotel placement,
+        compensation calculation, and traveler notification through five Lambda-backed sub-agents
+        exposed as tools via
+        <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html">AgentCore Gateway</a>.
+        Human escalation for edge cases &mdash; unaccompanied minors, medical needs &mdash; is
+        handled through an inline function that pauses the agent and routes to a human agent.
+      </p>
+
+      <hr />
+
+      <!-- Solution overview -->
+      <h2>Solution overview</h2>
+      <p>The architecture has five layers.</p>
+      <ol>
+        <li><strong>Event ingestion.</strong> Amazon EventBridge captures the flight cancellation event from the airline GDS system and fans it into Amazon SQS. AWS Step Functions triggers the harness through the <code>InvokeHarness</code> state for pipeline-orchestrated runs.</li>
+        <li><strong>AgentCore Harness.</strong> An orchestrator agent powered by Claude Sonnet 4.6 runs in an isolated microVM per passenger session. It reads and writes traveler context through AgentCore Memory, then fans out to five sub-agent tools.</li>
+        <li><strong>Sub-agent tools.</strong> Five Lambda functions &mdash; Flight Agent, Hotel Agent, Compensation Agent, Notify Agent, and Inline Function (human-in-loop escalation) &mdash; are declared as tools on an AgentCore Gateway. <em>The demo repository deploys Flight Agent and Notify Agent (Path B); the remaining tools follow the identical CDK pattern.</em></li>
+        <li><strong>Integration layer.</strong> AgentCore Gateway provides governed, audited connectivity to the airline GDS API and hotel booking API using SigV4 and OAuth. Amazon DynamoDB stores passenger profiles and booking state. Amazon SNS delivers the resolved itinerary to the traveler. Secrets Manager holds API keys and the Token Vault for credential rotation.</li>
+        <li><strong>Observability.</strong> AgentCore Observability provides a unified trace of every agent decision across every capability &mdash; model calls, tool invocations, memory reads &mdash; in one view. Amazon CloudWatch captures logs and metrics.</li>
+      </ol>
+
+      <div class="diagram-wrap">
+        <img src="travel-disruption-agentcore.png" alt="Architecture diagram: Travel Disruption Agent on Amazon Bedrock AgentCore Harness" />
+        <p class="diagram-caption">Five-layer architecture: external actors, event ingestion, AgentCore Harness with sub-agent tools, integration layer, and observability.</p>
+      </div>
+
+      <hr />
+
+      <!-- Creating the harness -->
+      <h2>Creating the harness</h2>
+      <p>With AgentCore harness, the agent is a set of parameters passed to <code>create_harness</code>. No orchestration code, no retry logic, no streaming parser.</p>
+
+<pre data-lang="Python"><code><span class="kw">import</span> boto3
+
+control_client = boto3.<span class="fn">client</span>(<span class="str">"bedrock-agentcore-control"</span>, region_name=<span class="str">"us-east-1"</span>)
+
+harness_params = {
+    <span class="str">"harnessName"</span>: <span class="str">"travel-disruption-agent"</span>,
+    <span class="str">"executionRoleArn"</span>: execution_role_arn,
+    <span class="str">"model"</span>: {
+        <span class="str">"bedrockModelConfig"</span>: {<span class="str">"modelId"</span>: <span class="str">"us.anthropic.claude-sonnet-4-6"</span>}
+    },
+    <span class="str">"systemPrompt"</span>: [{
+        <span class="str">"text"</span>: (
+            <span class="str">"You are an autonomous travel disruption recovery agent. "</span>
+            <span class="str">"When a flight is cancelled, you must: "</span>
+            <span class="str">"1. Rebook the passenger on the next available flight in the same class. "</span>
+            <span class="str">"2. If overnight delay, book a hotel near the departure airport. "</span>
+            <span class="str">"3. Calculate and issue compensation per the passenger loyalty tier policy. "</span>
+            <span class="str">"4. Send the passenger a complete summary of all changes. "</span>
+            <span class="str">"5. Escalate to a human agent for special handling needs. "</span>
+            <span class="str">"Always act on behalf of the passenger. Never ask unnecessary clarifying questions."</span>
+        )
+    }],
+    <span class="str">"tools"</span>: [{
+        <span class="str">"type"</span>: <span class="str">"agentcore_gateway"</span>,
+        <span class="str">"name"</span>: <span class="str">"travel-gateway"</span>,
+        <span class="str">"config"</span>: {
+            <span class="str">"agentCoreGateway"</span>: {
+                <span class="str">"gatewayArn"</span>: gateway_arn,
+                <span class="str">"outboundAuth"</span>: {<span class="str">"awsIam"</span>: {}}
+            }
+        }
+    }],
+    <span class="cm"># Scope to exactly the three tools the gateway exposes.</span>
+    <span class="cm"># Format: {GatewayTargetName}___{toolName}</span>
+    <span class="cm"># The prefix is the gateway TARGET resource name, not the gateway name.</span>
+    <span class="cm"># Avoids the ~900-token overhead of shell and file_operations.</span>
+    <span class="str">"allowedTools"</span>: [
+        <span class="str">"FlightRebookingTarget___rebook_flight"</span>,
+        <span class="str">"TravelerNotificationTarget___notify_traveler"</span>,
+        <span class="str">"escalate_to_agent"</span>,
+    ],
+    <span class="str">"maxIterations"</span>: <span class="num">15</span>,
+    <span class="str">"timeoutSeconds"</span>: <span class="num">120</span>,
+}
+
+<span class="cm"># Attach memory for passenger context persistence across sessions</span>
+harness_params[<span class="str">"memory"</span>] = {
+    <span class="str">"agentCoreMemoryConfiguration"</span>: {<span class="str">"arn"</span>: memory_arn}
+}
+
+response = control_client.<span class="fn">create_harness</span>(**harness_params)
+harness_arn = response[<span class="str">"arn"</span>]   <span class="cm"># API returns 'arn', not 'harnessArn'</span>
+</code></pre>
+
+      <p>That is the entire agent. The orchestration loop, tool selection, tool invocation, result injection, error handling, and session management are all handled by the harness.</p>
+
+      <hr />
+
+      <!-- Declaring tools -->
+      <h2>Declaring tools through AgentCore Gateway</h2>
+      <p>Two Lambda functions back the tools in this demo deployment. Each is registered on the gateway with a schema description precise enough for the model to select the right tool from natural language. The gateway handles inbound authentication, outbound SigV4 signing, and access control policy enforcement.</p>
+      <div class="callout"><strong>Note (Path B):</strong> This demo deploys Flight Agent and Notify Agent. Hotel Agent, Compensation Agent, and the EventBridge/SQS/SNS triggers follow the identical CDK pattern and can be added without changing the harness configuration.</div>
+      <p>Here is the flight rebooking tool declaration:</p>
+
+<pre data-lang="Python"><code>gateway_client = boto3.<span class="fn">client</span>(<span class="str">"bedrock-agentcore-control"</span>, region_name=<span class="str">"us-east-1"</span>)
+
+gateway_client.<span class="fn">create_gateway_target</span>(
+    gatewayId=gateway_id,
+    name=<span class="str">"FlightRebookingTarget"</span>,
+    <span class="cm"># GATEWAY_IAM_ROLE: gateway uses its service role to invoke Lambda.</span>
+    <span class="cm"># The credentialProvider sub-object must NOT be set for Lambda targets.</span>
+    credentialProviderConfigurations=[{
+        <span class="str">"credentialProviderType"</span>: <span class="str">"GATEWAY_IAM_ROLE"</span>,
+    }],
+    targetConfiguration={
+        <span class="str">"mcp"</span>: {
+            <span class="str">"lambda"</span>: {
+                <span class="str">"lambdaArn"</span>: rebook_flight_lambda_arn,
+                <span class="str">"toolSchema"</span>: {
+                    <span class="str">"inlinePayload"</span>: [{
+                        <span class="str">"name"</span>: <span class="str">"rebook_flight"</span>,
+                        <span class="str">"description"</span>: (
+                            <span class="str">"Find the next available flight matching the passenger's original route "</span>
+                            <span class="str">"and class, and rebook them. Use when a flight has been cancelled or "</span>
+                            <span class="str">"significantly delayed and a new flight must be confirmed. "</span>
+                            <span class="str">"Returns the new flight details including confirmation number."</span>
+                        ),
+                        <span class="str">"inputSchema"</span>: {
+                            <span class="str">"type"</span>: <span class="str">"object"</span>,
+                            <span class="str">"properties"</span>: {
+                                <span class="str">"passenger_id"</span>:    {<span class="str">"type"</span>: <span class="str">"string"</span>},
+                                <span class="str">"origin"</span>:          {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"IATA origin code"</span>},
+                                <span class="str">"destination"</span>:     {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"IATA destination code"</span>},
+                                <span class="str">"original_flight"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"Cancelled flight number"</span>},
+                                <span class="str">"cabin_class"</span>:     {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"economy | business | first"</span>},
+                                <span class="str">"max_hours"</span>:       {<span class="str">"type"</span>: <span class="str">"integer"</span>},
+                            },
+                            <span class="str">"required"</span>: [<span class="str">"passenger_id"</span>, <span class="str">"origin"</span>, <span class="str">"destination"</span>, <span class="str">"original_flight"</span>, <span class="str">"cabin_class"</span>],
+                        },
+                    }]
+                }
+            }
+        }
+    }
+)
+</code></pre>
+
+      <p>The hotel and compensation tools follow the same pattern. The <code>escalate_to_agent</code> tool is declared as an <strong>inline function</strong> &mdash; it executes on the client side, not on the harness VM. When the agent calls it, execution pauses and the call is returned to the invoking code for human handling.</p>
+
+      <hr />
+
+      <!-- Invoking the harness -->
+      <h2>Invoking the harness per disrupted passenger</h2>
+      <p>When EventBridge fires a cancellation event, a Lambda processor queries DynamoDB for all affected passengers and invokes the harness once per passenger, each with a unique <code>runtimeSessionId</code>. Every session runs in its own isolated microVM with its own memory and filesystem.</p>
+
+<pre data-lang="Python"><code><span class="kw">import</span> boto3, uuid, json
+
+runtime_client = boto3.<span class="fn">client</span>(<span class="str">"bedrock-agentcore"</span>, region_name=<span class="str">"us-east-1"</span>)
+
+<span class="kw">def</span> <span class="fn">handle_disruption</span>(passenger: dict, cancelled_flight: str) -> <span class="kw">None</span>:
+    <span class="cm"># runtimeSessionId must be at least 33 characters</span>
+    session_id = str(uuid.<span class="fn">uuid4</span>()) + <span class="str">f"-{passenger['passenger_id']}"</span>
+
+    response = runtime_client.<span class="fn">invoke_harness</span>(
+        harnessArn=HARNESS_ARN,
+        runtimeSessionId=session_id,
+        messages=[{
+            <span class="str">"role"</span>: <span class="str">"user"</span>,
+            <span class="str">"content"</span>: [{
+                <span class="str">"text"</span>: (
+                    <span class="str">f"Flight {cancelled_flight} has been cancelled. "</span>
+                    <span class="str">f"Passenger: {passenger['name']}, "</span>
+                    <span class="str">f"Loyalty tier: {passenger['tier']}, "</span>
+                    <span class="str">f"Seat preference: {passenger['seat_preference']}, "</span>
+                    <span class="str">f"Hotel preference: {passenger['hotel_brand']}. "</span>
+                    <span class="str">f"Please recover this passenger completely."</span>
+                )
+            }]
+        }],
+    )
+
+    <span class="cm"># Stream the response and handle human escalation</span>
+    <span class="fn">handle_stream</span>(response[<span class="str">"stream"</span>], session_id, passenger)
+</code></pre>
+
+      <div class="callout">
+        <strong>Note:</strong> The <code>runtimeSessionId</code> must be at least 33 characters.
+        Reusing the same session ID in a follow-up invocation continues the conversation in the
+        same environment, with full memory of what was previously done for that passenger.
+      </div>
+
+      <hr />
+
+      <!-- Inline functions -->
+      <h2>Handling human-in-the-loop escalation with inline functions</h2>
+      <p>The <code>escalate_to_agent</code> tool is an inline function. When the orchestrator determines that a passenger needs special handling, it calls the tool and the harness returns a <code>stopReason</code> of <code>tool_use</code> instead of completing the turn. The invoking code intercepts the call, routes to a human agent, and sends the result back.</p>
+
+<pre data-lang="Python"><code><span class="kw">def</span> <span class="fn">handle_stream</span>(stream, session_id: str, passenger: dict) -> <span class="kw">None</span>:
+    tool_use_id   = <span class="kw">None</span>
+    tool_name     = <span class="kw">None</span>
+    tool_input_buf = <span class="str">""</span>
+
+    <span class="kw">for</span> event <span class="kw">in</span> stream:
+        <span class="cm"># Print agent reasoning and final response text</span>
+        <span class="kw">if</span> <span class="str">"contentBlockDelta"</span> <span class="kw">in</span> event:
+            delta = event[<span class="str">"contentBlockDelta"</span>].<span class="fn">get</span>(<span class="str">"delta"</span>, {})
+            <span class="kw">if</span> <span class="str">"text"</span> <span class="kw">in</span> delta:
+                <span class="fn">print</span>(delta[<span class="str">"text"</span>], end=<span class="str">""</span>, flush=<span class="kw">True</span>)
+            <span class="kw">if</span> <span class="str">"toolUse"</span> <span class="kw">in</span> delta:
+                tool_input_buf += delta[<span class="str">"toolUse"</span>].<span class="fn">get</span>(<span class="str">"input"</span>, <span class="str">""</span>)
+
+        <span class="cm"># Capture inline function call metadata</span>
+        <span class="kw">if</span> <span class="str">"contentBlockStart"</span> <span class="kw">in</span> event:
+            start = event[<span class="str">"contentBlockStart"</span>].<span class="fn">get</span>(<span class="str">"start"</span>, {})
+            <span class="kw">if</span> <span class="str">"toolUse"</span> <span class="kw">in</span> start:
+                tool_use_id = start[<span class="str">"toolUse"</span>][<span class="str">"toolUseId"</span>]
+                tool_name   = start[<span class="str">"toolUse"</span>][<span class="str">"name"</span>]
+
+        <span class="cm"># Agent paused — handle the inline function client-side</span>
+        <span class="kw">if</span> <span class="str">"messageStop"</span> <span class="kw">in</span> event:
+            stop_reason = event[<span class="str">"messageStop"</span>].<span class="fn">get</span>(<span class="str">"stopReason"</span>)
+            <span class="kw">if</span> stop_reason == <span class="str">"tool_use"</span> <span class="kw">and</span> tool_name == <span class="str">"escalate_to_agent"</span>:
+                escalation_input = json.<span class="fn">loads</span>(tool_input_buf) <span class="kw">if</span> tool_input_buf <span class="kw">else</span> {}
+                human_result = <span class="fn">route_to_human_agent</span>(passenger, escalation_input)
+
+                <span class="cm"># Both toolUse and toolResult must be sent together</span>
+                runtime_client.<span class="fn">invoke_harness</span>(
+                    harnessArn=HARNESS_ARN,
+                    runtimeSessionId=session_id,
+                    messages=[
+                        {
+                            <span class="str">"role"</span>: <span class="str">"assistant"</span>,
+                            <span class="str">"content"</span>: [{
+                                <span class="str">"toolUse"</span>: {
+                                    <span class="str">"toolUseId"</span>: tool_use_id,
+                                    <span class="str">"name"</span>: tool_name,
+                                    <span class="str">"input"</span>: escalation_input,
+                                }
+                            }],
+                        },
+                        {
+                            <span class="str">"role"</span>: <span class="str">"user"</span>,
+                            <span class="str">"content"</span>: [{
+                                <span class="str">"toolResult"</span>: {
+                                    <span class="str">"toolUseId"</span>: tool_use_id,
+                                    <span class="str">"content"</span>: [{<span class="str">"text"</span>: human_result}],
+                                    <span class="str">"status"</span>: <span class="str">"success"</span>,
+                                }
+                            }],
+                        },
+                    ],
+                )
+</code></pre>
+
+      <p>Both the assistant <code>toolUse</code> message and the <code>toolResult</code> must be sent together in the follow-up call. The harness does not persist the inline function turn automatically &mdash; requiring the client to send both keeps the session in a clean state regardless of whether the client completes the tool call.</p>
+
+      <hr />
+
+      <!-- Memory -->
+      <h2>Memory: the agent always knows what it did</h2>
+      <p>AgentCore Memory stores the full conversation history for each <code>runtimeSessionId</code>. When a disrupted traveler calls support after receiving their new itinerary &mdash; "Why was I put on the 6 PM flight instead of the 4 PM?" &mdash; the agent answers from memory without re-querying any systems.</p>
+
+<pre data-lang="Python"><code><span class="cm"># Follow-up invocation — same session ID, full context available</span>
+response = runtime_client.<span class="fn">invoke_harness</span>(
+    harnessArn=HARNESS_ARN,
+    runtimeSessionId=session_id,   <span class="cm"># same session as the recovery run</span>
+    messages=[{
+        <span class="str">"role"</span>: <span class="str">"user"</span>,
+        <span class="str">"content"</span>: [{<span class="str">"text"</span>: <span class="str">"Why was I put on the 6 PM flight?"</span>}]
+    }],
+)
+</code></pre>
+
+      <p>The agent answers correctly because it remembers that the 4 PM flight was full in the passenger's cabin class, and the 6 PM was the next available matching flight. No re-querying, no context window management, no history concatenation in the caller.</p>
+      <p>Memory persists across microVM lifecycles. Even after a session expires and a new microVM is allocated, the conversation history is available to the next session with the same ID.</p>
+
+      <hr />
+
+      <!-- Gateway -->
+      <h2>AgentCore Gateway: secure tool connectivity without credential sprawl</h2>
+      <p>The Flight and Hotel agents call external APIs &mdash; airline GDS systems and hotel booking APIs &mdash; that require API keys and OAuth tokens. Rather than storing credentials in Lambda environment variables and managing them per function, all external connectivity is centralized in AgentCore Gateway.</p>
+      <p>The gateway resolves credentials at invocation time from the Token Vault using <code>${arn:...}</code> references in header values. Credentials are never exposed to the harness VM or the Lambda functions.</p>
+
+<pre data-lang="Python"><code><span class="cm"># Gateway target for GDS API — API key resolved at invocation time</span>
+gateway_client.<span class="fn">create_gateway_target</span>(
+    gatewayId=gateway_id,
+    name=<span class="str">"gds-api-target"</span>,
+    targetConfiguration={
+        <span class="str">"openApi"</span>: {
+            <span class="str">"url"</span>: <span class="str">"https://api.airline-gds.example.com/v2"</span>,
+            <span class="str">"headers"</span>: {
+                <span class="cm"># Token Vault ARN — resolved to actual credential at call time</span>
+                <span class="str">"x-api-key"</span>: (
+                    <span class="str">"${arn:aws:bedrock-agentcore:us-east-1:"</span>
+                    <span class="str">"123456789012:token-vault/default/"</span>
+                    <span class="str">"apikeycredentialprovider/gds-api-key}"</span>
+                )
+            }
+        }
+    }
+)
+</code></pre>
+
+      <p>Every tool call through the gateway is logged, policy-checked, and traceable. If a tool is misconfigured or the downstream API is unavailable, the gateway returns a structured error that the agent can reason about and retry or escalate.</p>
+
+      <hr />
+
+      <!-- Observability -->
+      <h2>Observability: every decision in one view</h2>
+      <p>AgentCore Observability automatically traces every action the agent takes &mdash; model calls, tool invocations, memory reads and writes, inline function pauses &mdash; without any instrumentation code. The unified trace view shows the complete reasoning chain for each passenger recovery session.</p>
+      <p>This is the operational difference from running agents on general-purpose compute. Instead of correlating CloudWatch log groups across multiple Lambda functions and a model API, you get one trace per passenger session that shows exactly what the agent decided, which tool it called, what the tool returned, and how the agent used that result.</p>
+      <p>For the disruption scenario, this means an airline operations team can audit any rebooking decision: why this flight was chosen, when the hotel was booked, what compensation amount was calculated, and whether a human agent was involved &mdash; all from a single trace.</p>
+
+      <hr />
+
+      <!-- Step Functions -->
+      <h2>Step Functions integration for batch recovery</h2>
+      <p>When a major weather event cancels hundreds of flights simultaneously, the recovery runs as a Step Functions state machine. The <code>InvokeHarness</code> state type provides native integration without a Lambda proxy.</p>
+
+<pre data-lang="JSON"><code>{
+  <span class="var">"Comment"</span>: <span class="str">"Batch passenger disruption recovery"</span>,
+  <span class="var">"StartAt"</span>: <span class="str">"FetchAffectedPassengers"</span>,
+  <span class="var">"States"</span>: {
+    <span class="var">"FetchAffectedPassengers"</span>: {
+      <span class="var">"Type"</span>: <span class="str">"Task"</span>,
+      <span class="var">"Resource"</span>: <span class="str">"arn:aws:states:::dynamodb:scan"</span>,
+      <span class="var">"Parameters"</span>: {
+        <span class="var">"TableName"</span>: <span class="str">"PassengerProfiles"</span>,
+        <span class="var">"FilterExpression"</span>: <span class="str">"cancelled_flight = :flight"</span>,
+        <span class="var">"ExpressionAttributeValues"</span>: {
+          <span class="var">":flight"</span>: {<span class="var">"S.$"</span>: <span class="str">"$.cancelledFlight"</span>}
+        }
+      },
+      <span class="var">"Next"</span>: <span class="str">"RecoverPassengersInParallel"</span>
+    },
+    <span class="var">"RecoverPassengersInParallel"</span>: {
+      <span class="var">"Type"</span>: <span class="str">"Map"</span>,
+      <span class="var">"ItemsPath"</span>: <span class="str">"$.Items"</span>,
+      <span class="var">"MaxConcurrency"</span>: <span class="num">50</span>,
+      <span class="var">"Iterator"</span>: {
+        <span class="var">"StartAt"</span>: <span class="str">"InvokeHarness"</span>,
+        <span class="var">"States"</span>: {
+          <span class="var">"InvokeHarness"</span>: {
+            <span class="var">"Type"</span>: <span class="str">"Task"</span>,
+            <span class="var">"Resource"</span>: <span class="str">"arn:aws:states:::bedrock-agentcore:invokeHarness"</span>,
+            <span class="var">"Parameters"</span>: {
+              <span class="var">"HarnessArn"</span>: <span class="str">"arn:aws:bedrock-agentcore:us-east-1:123456789012:harness/travel-disruption-agent"</span>,
+              <span class="var">"RuntimeSessionId.$"</span>: <span class="str">"States.Format('{}-{}', $$.Execution.Name, $.passenger_id)"</span>,
+              <span class="var">"Messages"</span>: [{
+                <span class="var">"Role"</span>: <span class="str">"user"</span>,
+                <span class="var">"Content"</span>: [{
+                  <span class="var">"Text.$"</span>: <span class="str">"States.Format('Recover passenger {} on cancelled flight {}', $.name, $.cancelled_flight)"</span>
+                }]
+              }]
+            },
+            <span class="var">"End"</span>: <span class="kw">true</span>
+          }
+        }
+      },
+      <span class="var">"End"</span>: <span class="kw">true</span>
+    }
+  }
+}
+</code></pre>
+
+      <p>Step Functions handles concurrency, retries, error handling, and progress tracking. The harness handles the agent logic. No orchestration code is needed in either layer.</p>
+
+      <hr />
+
+      <!-- What harness reduced -->
+      <h2>What the harness specifically reduced for this project</h2>
+      <p>The solution does not require any agent orchestration code. No model call loop, no tool dispatcher, no streaming parser, no retry logic, no container image, no compute provisioning.</p>
+
+      <h3>What we did write</h3>
+      <ul>
+        <li>An EventBridge rule and SQS consumer (30 lines) that trigger recovery per passenger.</li>
+        <li>A DynamoDB schema for passenger profiles and booking state.</li>
+        <li>Two Lambda tool functions (Flight Agent and Notify Agent) that contain only the business logic for that tool. No agent awareness. Hotel Agent and Compensation Agent follow the identical pattern to extend.</li>
+        <li>A <code>create_harness</code> call (40 lines) during stack deployment.</li>
+        <li>A stream handler (50 lines) for inline function escalation.</li>
+      </ul>
+
+      <h3>What the harness eliminated</h3>
+      <ul>
+        <li>The agent loop (call model &rarr; receive tool call &rarr; invoke tool &rarr; return result &rarr; repeat).</li>
+        <li>Tool routing logic.</li>
+        <li>Memory retrieval and context formatting.</li>
+        <li>Session isolation and state management.</li>
+        <li>Observability instrumentation.</li>
+      </ul>
+
+      <p>Changing agent behavior &mdash; different model, new tool, updated system prompt, adjusted timeout &mdash; is an API call, not a code deployment. The agent definition is configuration that lives outside the application code and can be versioned, tested, and rolled back independently.</p>
+
+      <hr />
+
+      <!-- When to use Runtime -->
+      <h2>When to use AgentCore Runtime instead</h2>
+      <p>AgentCore harness works well for agents where the core pattern is: receive a prompt, pick a tool, call it, receive the result, and continue until done. The travel disruption scenario fits this pattern well &mdash; the orchestrator selects tools based on what needs to happen next, and the tools are independent and stateless.</p>
+      <p>If your agent requires custom orchestration logic between turns &mdash; running a LangGraph state machine, pre-processing model inputs, executing arbitrary Python before and after each model call &mdash; <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime.html">AgentCore Runtime</a> gives you full control. Both the harness and Runtime run on the same underlying infrastructure: microVMs, Memory, Gateway, and Observability. You can start with the harness and move to Runtime as complexity grows.</p>
+
+      <hr />
+
+      <!-- Prerequisites -->
+      <h2>Prerequisites</h2>
+      <p>To deploy this solution, you need the following:</p>
+      <ul>
+        <li>An AWS account with permissions to create IAM roles, Lambda functions, DynamoDB tables, EventBridge rules, SQS queues, and AgentCore resources.</li>
+        <li>Python 3.10 or later.</li>
+        <li>AWS CLI 2.x configured with credentials in a <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-regions.html">supported region</a>.</li>
+        <li>Access to <code>us.anthropic.claude-sonnet-4-6</code> in Amazon Bedrock.</li>
+        <li>An IAM execution role the harness can assume. See the <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-security.html#harness-execution-role-policy">execution role policy</a> for minimum permissions.</li>
+      </ul>
+
+      <hr />
+
+      <!-- Conclusion -->
+      <h2>Conclusion</h2>
+      <p>AgentCore harness lets you build a production-grade autonomous recovery agent without writing orchestration code. The agent handles tool selection, parallel session isolation, conversation memory, human escalation, and end-to-end observability through configuration and per-invocation parameters.</p>
+      <p>For the travel and hospitality industry, this changes the economics of disruption recovery. A weather event that previously required 50 gate agents working for hours can be handled by a harness running hundreds of parallel sessions, each resolving one passenger completely in under 10 seconds, with every decision auditable in the AgentCore Observability trace view.</p>
+      <p>For agents with straightforward tool-calling patterns, the harness removes operational overhead and lets you iterate behavior at the speed of a configuration change.</p>
+      <p>To get started with AgentCore harness, visit the <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html">AgentCore harness documentation</a> or explore the <a href="https://aws.amazon.com/bedrock/agentcore/">Amazon Bedrock AgentCore</a> product page for pricing and availability.</p>
+
+    </div><!-- /.post-body -->
+
+    <!-- Author section -->
+    <section class="author-section">
+      <h2>About the authors</h2>
+
+      <div class="author-card">
+        <div class="author-avatar">Y</div>
+        <div class="author-info">
+          <h3>Your Name</h3>
+          <p>Your bio here &mdash; role, specialization, and a personal note. For example: Senior Technical Account Manager at AWS, helping customers in the travel and hospitality industry design and optimize cloud solutions. Passionate about generative AI and its applications in operational automation.</p>
+        </div>
+      </div>
+    </section>
+
+  </article>
+</div><!-- /.page-wrapper -->
+
+<!-- Footer -->
+<footer class="site-footer">
+  <p>&copy; 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved. &nbsp;&middot;&nbsp;
+    <a href="https://aws.amazon.com/privacy/">Privacy</a> &nbsp;&middot;&nbsp;
+    <a href="https://aws.amazon.com/terms/">Site terms</a>
+  </p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# CDK
+cdk-demo/cdk.out/
+cdk-demo/node_modules/
+cdk-demo/lib/           # compiled JS output
+
+# CDK outputs — contains account-specific ARNs, gitignored
+# Run `cdk deploy` to regenerate
+cdk-demo/outputs.json
+
+# Diagram output (regenerate with: awsdac travel-disruption-agentcore.yaml)
+travel-disruption-agentcore.png
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# AWS credentials / environment
+.env
+.env.*
+*.pem

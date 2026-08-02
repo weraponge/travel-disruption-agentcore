@@ -1,0 +1,335 @@
+Diagram:
+  DefinitionFiles:
+    - Type: URL
+      Url: https://raw.githubusercontent.com/awslabs/diagram-as-code/main/definitions/definition-for-aws-icons-light.yaml
+
+  Resources:
+
+    Canvas:
+      Type: AWS::Diagram::Canvas
+      Direction: vertical
+      Children:
+        - ExternalRow
+        - AWSCloud
+
+    # ── External actors ───────────────────────────────────────────────
+    ExternalRow:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - Traveler
+        - AirlineSystem
+
+    Traveler:
+      Type: AWS::Diagram::Resource
+      Preset: "User"
+      Title: "Disrupted\nTraveler"
+
+    AirlineSystem:
+      Type: AWS::Diagram::Resource
+      Preset: "Gear"
+      Title: "Airline / GDS\nSystem"
+
+    # ── AWS Cloud ─────────────────────────────────────────────────────
+    AWSCloud:
+      Type: AWS::Diagram::Cloud
+      Preset: AWSCloudNoLogo
+      Direction: vertical
+      Children:
+        - Row1
+        - AgentCoreHarness
+        - Row4
+        - Row5
+
+    # ── Row 1: Event ingestion ────────────────────────────────────────
+    Row1:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - EventBridge
+        - SQSQueue
+        - StepFunctions
+
+    EventBridge:
+      Type: AWS::Events::EventBus
+      Title: "Amazon EventBridge\nFlight Cancellation"
+
+    SQSQueue:
+      Type: AWS::SQS::Queue
+      Title: "Amazon SQS\nDisruption Queue"
+
+    StepFunctions:
+      Type: AWS::StepFunctions::StateMachine
+      Title: "Step Functions\nInvokeHarness State"
+
+    # ── AgentCore Harness ─────────────────────────────────────────────
+    AgentCoreHarness:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Bedrock"
+      Title: "AgentCore Harness — Travel Disruption Agent"
+      Direction: vertical
+      Children:
+        - Row2
+        - Row3
+
+    Row2:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - OrchestratorAgent
+        - HarnessMemory
+        - HarnessRuntime
+
+    OrchestratorAgent:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Bedrock"
+      Title: "Orchestrator Agent\nClaude Sonnet 4.6\nStrands Agent Loop"
+
+    HarnessMemory:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon ElastiCache"
+      Title: "AgentCore Memory\nShort + Long-term\nPassenger Preferences"
+
+    HarnessRuntime:
+      Type: AWS::Diagram::Resource
+      Preset: "Runtime"
+      Title: "Isolated microVM\nper Session\nAgentCore Runtime"
+
+    Row3:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - FlightAgent
+        - HotelAgent
+        - CompensationAgent
+        - NotifyAgent
+        - EscalationAgent
+
+    FlightAgent:
+      Type: AWS::Lambda::Function
+      Title: "Flight Agent\nRebook Flight\nGDS API"
+
+    HotelAgent:
+      Type: AWS::Lambda::Function
+      Title: "Hotel Agent\nBook Hotel\nHotel API"
+
+    CompensationAgent:
+      Type: AWS::Lambda::Function
+      Title: "Compensation\nAgent\nMiles / Voucher"
+
+    NotifyAgent:
+      Type: AWS::Lambda::Function
+      Title: "Notify Agent\nSMS / Email\nPush"
+
+    EscalationAgent:
+      Type: AWS::Lambda::Function
+      Title: "Inline Function\nHuman-in-Loop\nEscalation"
+
+    # ── Row 4: Integration / data ─────────────────────────────────────
+    Row4:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - AgentCoreGateway
+        - DynamoDB
+        - SNS
+        - SecretsManager
+
+    AgentCoreGateway:
+      Type: AWS::Diagram::Resource
+      Preset: "Gateway"
+      Title: "AgentCore Gateway\nGDS + Hotel APIs\nSigV4 / OAuth"
+
+    DynamoDB:
+      Type: AWS::DynamoDB::Table
+      Title: "Amazon DynamoDB\nPassenger Profiles\nBooking State"
+
+    SNS:
+      Type: AWS::SNS::Topic
+      Title: "Amazon SNS\nTraveler Notifications\n~8 sec resolution"
+
+    SecretsManager:
+      Type: AWS::SecretsManager::Secret
+      Title: "Secrets Manager\nAPI Keys\nToken Vault"
+
+    # ── Row 5: Observability ──────────────────────────────────────────
+    Row5:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - AgentCoreObs
+        - CloudWatch
+
+    AgentCoreObs:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon CloudWatch"
+      Title: "AgentCore Observability\nUnified Trace View\nEvery Agent Decision"
+
+    CloudWatch:
+      Type: AWS::CloudWatch::Alarm
+      Title: "Amazon CloudWatch\nLogs & Metrics"
+
+  Links:
+    # ── External → Row 1 ──────────────────────────────────────────────
+    - Source: Traveler
+      SourcePosition: E
+      Target: AirlineSystem
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetLeft:
+          Title: "Cancel Flight"
+
+    - Source: AirlineSystem
+      SourcePosition: S
+      Target: EventBridge
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        SourceRight:
+          Title: "Flight Cancelled"
+
+    # ── Row 1 internal ────────────────────────────────────────────────
+    - Source: EventBridge
+      SourcePosition: E
+      Target: SQSQueue
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+
+    - Source: StepFunctions
+      SourcePosition: W
+      Target: SQSQueue
+      TargetPosition: E
+      TargetArrowHead:
+        Type: Open
+
+    # ── Row 1 → Harness ───────────────────────────────────────────────
+    - Source: SQSQueue
+      SourcePosition: S
+      Target: OrchestratorAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        SourceRight:
+          Title: "Invoke Harness"
+
+    # ── Row 2 internal ────────────────────────────────────────────────
+    - Source: OrchestratorAgent
+      SourcePosition: E
+      Target: HarnessMemory
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+
+    # ── Row 2 → Row 3 ─────────────────────────────────────────────────
+    - Source: OrchestratorAgent
+      SourcePosition: S
+      Target: FlightAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: OrchestratorAgent
+      SourcePosition: S
+      Target: HotelAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: OrchestratorAgent
+      SourcePosition: S
+      Target: CompensationAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: OrchestratorAgent
+      SourcePosition: S
+      Target: NotifyAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: OrchestratorAgent
+      SourcePosition: SE
+      Target: EscalationAgent
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetLeft:
+          Title: "tool_use"
+
+    # ── Row 3 → Row 4 ─────────────────────────────────────────────────
+    - Source: FlightAgent
+      SourcePosition: S
+      Target: AgentCoreGateway
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: HotelAgent
+      SourcePosition: S
+      Target: AgentCoreGateway
+      TargetPosition: NE
+      TargetArrowHead:
+        Type: Open
+
+    - Source: CompensationAgent
+      SourcePosition: S
+      Target: DynamoDB
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        SourceRight:
+          Title: "Write Compensation"
+
+    - Source: NotifyAgent
+      SourcePosition: S
+      Target: SNS
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    - Source: EscalationAgent
+      SourcePosition: S
+      Target: SecretsManager
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    # ── Row 4 internal ────────────────────────────────────────────────
+    - Source: AgentCoreGateway
+      SourcePosition: E
+      Target: DynamoDB
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetLeft:
+          Title: "Lookup Passengers"
+
+    # ── Row 4 → Row 5 ─────────────────────────────────────────────────
+    - Source: DynamoDB
+      SourcePosition: S
+      Target: AgentCoreObs
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        SourceRight:
+          Title: "Auto-traced"
+
+    - Source: SNS
+      SourcePosition: S
+      Target: CloudWatch
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+
+    # ── Row 5 internal ────────────────────────────────────────────────
+    - Source: AgentCoreObs
+      SourcePosition: E
+      Target: CloudWatch
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
