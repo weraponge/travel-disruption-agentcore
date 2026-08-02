@@ -25,39 +25,14 @@ This project uses it to build a travel disruption recovery agent that:
 
 ## Architecture
 
-```
-Disrupted Traveler ──► Airline / GDS System
-                              │
-                     Flight Cancelled Event
-                              │
-                       Amazon EventBridge
-                              │
-                         Amazon SQS
-                              │
-          ┌───────────────────▼──────────────────────┐
-          │         AgentCore Harness                 │
-          │  ┌─────────────────────────────────────┐  │
-          │  │  Orchestrator Agent                 │  │
-          │  │  Claude Sonnet 4.6 · Strands Loop   │  │
-          │  └──────────────┬──────────────────────┘  │
-          │  AgentCore Memory (session context)        │
-          │  Isolated microVM per passenger session    │
-          └──────────────────┼───────────────────────┘
-                             │ AgentCore Gateway (MCP / AWS_IAM)
-               ┌─────────────┴─────────────┐
-               ▼                           ▼
-       Flight Agent Lambda        Notify Agent Lambda
-       (Mock GDS rebooking)      (Mock SMS / Email)
-               │                           │
-               ▼                           ▼
-         DynamoDB                        Amazon SNS
-     (Passenger Profiles)         (Traveler Notifications)
-
-  + escalate_to_agent (inline function → human-in-the-loop)
-  + AgentCore Observability (unified trace per session)
-```
+![Travel Disruption Agent Architecture](travel-disruption-agentcore.png)
 
 > **Demo scope:** This repo deploys the Flight Agent and Notify Agent (Path B). Hotel Agent, Compensation Agent, EventBridge, SQS, and SNS triggers follow the identical CDK + Lambda pattern and can be added without changing the harness configuration.
+
+To regenerate the diagram:
+```bash
+python3 generate_diagram.py
+```
 
 ---
 
