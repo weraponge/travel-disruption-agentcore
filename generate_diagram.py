@@ -1,23 +1,25 @@
 """
 generate_diagram.py
-Professional architecture diagram for Travel Disruption Agent
-AWS colour scheme, no emoji dependency.
+Professional architecture diagram using OFFICIAL AWS service icons.
+Icons sourced from the AWS Architecture Icons pack (same source as awsdac).
+No graphviz or emoji fonts required.
 """
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.patches import FancyBboxPatch, Circle
-import numpy as np
+import matplotlib.image as mpimg
+from matplotlib.patches import FancyBboxPatch
+from pathlib import Path
+import os
 
-# ── AWS colour palette ─────────────────────────────────────────────────────
+# ── AWS colour palette ────────────────────────────────────────────────────────
 AWS_ORANGE   = "#FF9900"
 AWS_DARK     = "#232F3E"
 AWS_TEAL     = "#01A88D"
 AWS_PURPLE   = "#8C4FFF"
 AWS_GREEN    = "#1A7A3F"
 AWS_RED      = "#BF0816"
-AWS_BLUE     = "#0073BB"
+AWS_SLATE    = "#546E7A"
 LIGHT_TEAL   = "#E6F6F4"
 LIGHT_ORANGE = "#FFF8EE"
 LIGHT_PURPLE = "#F3EEFF"
@@ -27,84 +29,110 @@ WHITE        = "#FFFFFF"
 TEXT_DARK    = "#111111"
 TEXT_MID     = "#555555"
 
-fig, ax = plt.subplots(figsize=(20, 24))
-ax.set_xlim(0, 20)
-ax.set_ylim(0, 24)
+# ── Icon paths (from awsdac cache) ────────────────────────────────────────────
+MEDIA = Path.home() / ".cache/awsdac/da2d30aaaa858e40cbd77fd47263bbe1-AWS-Architecture-Icons-Deck_For-Light-BG_02072025.pptx/ppt/media"
+
+ICONS = {
+    "bedrock":      MEDIA / "image425.png",   # Amazon Bedrock — Orchestrator
+    "eventbridge":  MEDIA / "image304.png",   # Amazon EventBridge
+    "sqs":          MEDIA / "image290.png",   # Amazon SQS
+    "stepfn":       MEDIA / "image302.png",   # AWS Step Functions
+    "lambda":       MEDIA / "image35.png",    # AWS Lambda
+    "dynamodb":     MEDIA / "image622.png",   # Amazon DynamoDB
+    "sns":          MEDIA / "image282.png",   # Amazon SNS
+    "secrets":      MEDIA / "image1448.png",  # AWS Secrets Manager
+    "cloudwatch":   MEDIA / "image974.png",   # Amazon CloudWatch
+    "gateway":      MEDIA / "image1302.png",  # Gateway
+    "agent":        MEDIA / "image1184.png",  # DataSync Agent — used for AgentCore Agent
+    "runtime":      MEDIA / "image1208.png",  # Runtime
+    "user":         MEDIA / "image127.png",   # User
+    "memory":       MEDIA / "image664.png",   # Amazon MemoryDB — AgentCore Memory
+    "observability":MEDIA / "image994.png",   # CloudWatch Synthetics — Observability
+    "inline_fn":    MEDIA / "image65.png",    # Step Functions workflow — Inline Function
+}
+
+def load_icon(key):
+    path = ICONS.get(key)
+    if path and path.exists():
+        return mpimg.imread(str(path))
+    return None
+
+# ── Canvas ────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(22, 26))
+ax.set_xlim(0, 22)
+ax.set_ylim(0, 26)
 ax.axis('off')
 fig.patch.set_facecolor(WHITE)
 
-# ── Primitives ─────────────────────────────────────────────────────────────
+# ── Primitives ────────────────────────────────────────────────────────────────
 def rbox(ax, x, y, w, h, fc=WHITE, ec=BORDER_GREY, lw=1.5, r=0.25, z=2, alpha=1.0):
     p = FancyBboxPatch((x, y), w, h,
                        boxstyle=f"round,pad=0,rounding_size={r}",
                        fc=fc, ec=ec, lw=lw, zorder=z, alpha=alpha)
     ax.add_patch(p)
 
-def badge(ax, cx, cy, label, fc=AWS_ORANGE, tc=WHITE, fs=7.5, z=5):
-    """Coloured pill badge for service abbreviation."""
-    ax.text(cx, cy, label, ha='center', va='center',
-            fontsize=fs, fontweight='bold', color=tc, zorder=z,
-            bbox=dict(boxstyle='round,pad=0.25', fc=fc, ec='none'))
+def place_icon(ax, icon_key, cx, cy, size=0.75, z=5):
+    img = load_icon(icon_key)
+    if img is not None:
+        ext = [cx - size/2, cx + size/2, cy - size/2, cy + size/2]
+        ax.imshow(img, extent=ext, zorder=z, aspect='auto')
 
-def service_box(ax, x, y, w, h,
-                abbr, abbr_color,
-                title, subtitle="",
-                fc=WHITE, ec=BORDER_GREY, z=3):
-    """Draw a service card: coloured abbreviation bar + title + subtitle."""
+def service_card(ax, x, y, w, h, icon_key, line1, line2="", line3="",
+                 fc=WHITE, ec=BORDER_GREY, accent=AWS_ORANGE,
+                 icon_size=0.65, z=3):
+    """Service card: accent top bar + AWS icon + label lines."""
     rbox(ax, x, y, w, h, fc=fc, ec=ec, lw=1.8, r=0.2, z=z)
-    # coloured left stripe
-    stripe = FancyBboxPatch((x, y), 0.22, h,
-                            boxstyle="round,pad=0,rounding_size=0.15",
-                            fc=abbr_color, ec='none', zorder=z+1)
-    ax.add_patch(stripe)
-    # abbreviation text rotated
-    ax.text(x + 0.11, y + h/2, abbr,
-            ha='center', va='center', fontsize=6.5, fontweight='bold',
-            color=WHITE, rotation=90, zorder=z+2)
-    # title
-    cx = x + 0.22 + (w - 0.22) / 2
-    ax.text(cx, y + h - 0.18, title,
-            ha='center', va='top', fontsize=8.5, fontweight='bold',
-            color=TEXT_DARK, zorder=z+1, wrap=True)
-    if subtitle:
-        ty = y + h - 0.42
-        for line in subtitle.split('\n'):
-            ax.text(cx, ty, line,
-                    ha='center', va='top', fontsize=7.5, color=TEXT_MID, zorder=z+1)
+    # accent top stripe
+    rbox(ax, x, y + h - 0.18, w, 0.18, fc=accent, ec='none', lw=0, r=0.1, z=z+1)
+    cx = x + w / 2
+    # icon centered
+    icon_cy = y + h - 0.18 - icon_size/2 - 0.08
+    place_icon(ax, icon_key, cx, icon_cy, size=icon_size, z=z+2)
+    # text lines
+    ty = y + h - 0.18 - icon_size - 0.22
+    for line in [line1, line2, line3]:
+        if line:
+            ax.text(cx, ty, line, ha='center', va='top',
+                    fontsize=8.0, fontweight='bold' if line == line1 else 'normal',
+                    color=TEXT_DARK if line == line1 else TEXT_MID,
+                    zorder=z+2)
             ty -= 0.2
 
-def group(ax, x, y, w, h, title, fc=LIGHT_TEAL, ec=AWS_TEAL, lw=2.5,
-          header_fc=AWS_TEAL, z=1):
+def group_header(ax, x, y, w, h, title, fc=LIGHT_TEAL, ec=AWS_TEAL, lw=2.5,
+                 header_fc=AWS_TEAL, z=1):
     rbox(ax, x, y, w, h, fc=fc, ec=ec, lw=lw, r=0.35, z=z)
-    rbox(ax, x, y+h-0.45, w, 0.45, fc=header_fc, ec=ec, lw=lw, r=0.2, z=z+1)
-    ax.text(x + 0.4, y + h - 0.225, title,
-            ha='left', va='center', fontsize=10, fontweight='bold',
+    rbox(ax, x, y + h - 0.45, w, 0.45, fc=header_fc, ec=ec, lw=lw, r=0.2, z=z+1)
+    ax.text(x + 0.45, y + h - 0.225, title,
+            ha='left', va='center', fontsize=10.5, fontweight='bold',
             color=WHITE, zorder=z+2)
 
 def varrow(ax, x, y1, y2, label="", lw=1.8, color=AWS_DARK, lo=(0.15, 0)):
     ax.annotate("", xy=(x, y2), xytext=(x, y1),
-                arrowprops=dict(arrowstyle='->', color=color, lw=lw), zorder=6)
+                arrowprops=dict(arrowstyle='->', color=color, lw=lw,
+                                mutation_scale=14), zorder=6)
     if label:
-        mx, my = x + lo[0], (y1+y2)/2 + lo[1]
-        ax.text(mx, my, label, ha='left', va='center', fontsize=7.5,
-                color=color, fontstyle='italic',
+        ax.text(x + lo[0], (y1+y2)/2 + lo[1], label,
+                ha='left', va='center', fontsize=7.5, color=color,
+                fontstyle='italic',
                 bbox=dict(boxstyle='round,pad=0.15', fc=WHITE, ec='none', alpha=0.9),
                 zorder=7)
 
-def harrow(ax, x1, x2, y, label="", lw=1.8, color=AWS_DARK, lo=(0, 0.12)):
+def harrow(ax, x1, x2, y, label="", lw=1.8, color=AWS_DARK, lo=(0, 0.13)):
     ax.annotate("", xy=(x2, y), xytext=(x1, y),
-                arrowprops=dict(arrowstyle='->', color=color, lw=lw), zorder=6)
+                arrowprops=dict(arrowstyle='->', color=color, lw=lw,
+                                mutation_scale=14), zorder=6)
     if label:
-        mx, my = (x1+x2)/2 + lo[0], y + lo[1]
-        ax.text(mx, my, label, ha='center', va='bottom', fontsize=7.5,
-                color=color, fontstyle='italic',
+        ax.text((x1+x2)/2 + lo[0], y + lo[1], label,
+                ha='center', va='bottom', fontsize=7.5, color=color,
+                fontstyle='italic',
                 bbox=dict(boxstyle='round,pad=0.15', fc=WHITE, ec='none', alpha=0.9),
                 zorder=7)
 
-def diagonal_arrow(ax, x1, y1, x2, y2, label="", lw=1.8, color=AWS_DARK, lo=(0.1,0.1)):
+def darrow(ax, x1, y1, x2, y2, label="", lw=1.8, color=AWS_DARK, lo=(0.1, 0.1)):
     ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
                 arrowprops=dict(arrowstyle='->', color=color, lw=lw,
-                                connectionstyle="arc3,rad=0"), zorder=6)
+                                connectionstyle="arc3,rad=0",
+                                mutation_scale=14), zorder=6)
     if label:
         mx = (x1+x2)/2 + lo[0]
         my = (y1+y2)/2 + lo[1]
@@ -114,209 +142,192 @@ def diagonal_arrow(ax, x1, y1, x2, y2, label="", lw=1.8, color=AWS_DARK, lo=(0.1
                 zorder=7)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TITLE BANNER
-# ══════════════════════════════════════════════════════════════════════════════
-rbox(ax, 0.5, 22.8, 19, 1.0, fc=AWS_DARK, ec=AWS_DARK, lw=0, r=0.3, z=1)
-ax.text(10, 23.42, "Travel Disruption Agent", ha='center', va='center',
-        fontsize=22, fontweight='bold', color=WHITE, zorder=2)
-ax.text(10, 23.05, "Amazon Bedrock AgentCore Harness   ·   Travel & Hospitality Industry",
-        ha='center', va='center', fontsize=11, color=AWS_ORANGE, zorder=2)
+# LAYOUT
+SW, SH = 2.8, 2.0   # standard card size
+# Card x positions (5 columns across ~20 units)
+CX = [1.5, 5.1, 8.7, 12.3, 15.9]   # left edge of each column
 
-# ══════════════════════════════════════════════════════════════════════════════
-# AWS CLOUD BORDER
-# ══════════════════════════════════════════════════════════════════════════════
-rbox(ax, 0.5, 0.5, 19, 22.0, fc="#FAFAFA", ec=AWS_DARK, lw=2.5, r=0.5, z=0)
-ax.text(1.1, 22.25, "AWS Cloud", ha='left', va='center',
+# ── Title banner ──────────────────────────────────────────────────────────────
+rbox(ax, 0.5, 24.5, 21, 1.2, fc=AWS_DARK, ec=AWS_DARK, lw=0, r=0.3, z=1)
+ax.text(11, 25.22, "Travel Disruption Agent", ha='center', va='center',
+        fontsize=24, fontweight='bold', color=WHITE, zorder=2)
+ax.text(11, 24.78, "Amazon Bedrock AgentCore Harness   ·   Travel & Hospitality",
+        ha='center', va='center', fontsize=12, color=AWS_ORANGE, zorder=2)
+
+# ── AWS Cloud border ──────────────────────────────────────────────────────────
+rbox(ax, 0.5, 0.4, 21, 23.8, fc="#FAFAFA", ec=AWS_DARK, lw=2.5, r=0.5, z=0)
+ax.text(1.2, 23.95, "AWS Cloud", ha='left', va='center',
         fontsize=10, fontweight='bold', color=AWS_DARK, zorder=2)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ROW 1 — External actors  (y=20.5)
-# ══════════════════════════════════════════════════════════════════════════════
-SW, SH = 2.6, 1.3   # standard service box dimensions
-R1Y = 20.3
+# ── Row 1: External actors  y=21.5 ───────────────────────────────────────────
+R1Y = 21.4
+ax.text(5.5, 23.6, "External", ha='center', fontsize=8,
+        color=TEXT_MID, fontstyle='italic')
 
-# Outside the cloud
-ax.text(5.0, 21.9, "External", ha='center', va='center',
-        fontsize=8, color=TEXT_MID, fontstyle='italic')
+service_card(ax, 1.8, R1Y, SW, SH, "user",
+             "Disrupted Traveler", "",
+             fc=LIGHT_ORANGE, ec=AWS_SLATE, accent=AWS_SLATE)
+service_card(ax, 5.4, R1Y, SW, SH, "user",
+             "Airline / GDS", "System",
+             fc=LIGHT_ORANGE, ec=AWS_SLATE, accent=AWS_SLATE)
 
-service_box(ax, 1.8,  R1Y, SW, SH, "USER",  "#607D8B",
-            "Disrupted Traveler", "", fc=LIGHT_ORANGE, ec="#607D8B")
-service_box(ax, 5.3,  R1Y, SW, SH, "GDS",   "#607D8B",
-            "Airline / GDS\nSystem", "", fc=LIGHT_ORANGE, ec="#607D8B")
+harrow(ax, 4.6, 5.4, R1Y + SH/2, label="Cancel Flight", color=AWS_DARK)
 
-harrow(ax, 4.0, 5.3, R1Y + SH/2, label="Cancel Flight", color=AWS_DARK)
+# ── Row 2: Event ingestion  y=18.8 ───────────────────────────────────────────
+R2Y = 18.8
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ROW 2 — Event ingestion  (y=18.0)
-# ══════════════════════════════════════════════════════════════════════════════
-R2Y = 18.0
+# Cloud border label
+service_card(ax, CX[0], R2Y, SW, SH, "eventbridge",
+             "Amazon EventBridge", "Flight Cancellation",
+             fc=LIGHT_ORANGE, ec=AWS_ORANGE, accent=AWS_ORANGE)
+service_card(ax, CX[1], R2Y, SW, SH, "sqs",
+             "Amazon SQS", "Disruption Queue",
+             fc=LIGHT_ORANGE, ec=AWS_ORANGE, accent=AWS_ORANGE)
+service_card(ax, CX[2], R2Y, SW, SH, "stepfn",
+             "Step Functions", "InvokeHarness State",
+             fc=LIGHT_ORANGE, ec=AWS_ORANGE, accent=AWS_ORANGE)
 
-service_box(ax, 2.0,  R2Y, SW, SH, "EB",   AWS_ORANGE,
-            "Amazon\nEventBridge", "Flight Cancellation",
-            fc=LIGHT_ORANGE, ec=AWS_ORANGE)
-service_box(ax, 5.5,  R2Y, SW, SH, "SQS",  AWS_ORANGE,
-            "Amazon SQS", "Disruption Queue",
-            fc=LIGHT_ORANGE, ec=AWS_ORANGE)
-service_box(ax, 9.0,  R2Y, SW, SH, "SFN",  AWS_ORANGE,
-            "Step Functions", "InvokeHarness State",
-            fc=LIGHT_ORANGE, ec=AWS_ORANGE)
+# Airline → EventBridge (straight down, same column)
+varrow(ax, 5.4 + SW/2, R1Y, R2Y + SH,
+       label="Flight\nCancelled", color=AWS_DARK, lo=(0.15, 0))
+harrow(ax, CX[0]+SW, CX[1], R2Y+SH/2, color=AWS_ORANGE)        # EB → SQS
+harrow(ax, CX[2]+SW/2, CX[1]+SW, R2Y+SH/2, color=AWS_ORANGE)   # SFN → SQS
 
-# External → EventBridge (go straight down via EventBridge column, no diagonal cross)
-varrow(ax, 2.0 + SW/2, R1Y, R2Y + SH,
-       label="Flight Cancelled", color=AWS_DARK, lo=(0.15, 0))
-harrow(ax, 4.6, 5.5, R2Y + SH/2, color=AWS_ORANGE)
-harrow(ax, 9.0, 8.1, R2Y + SH/2, color=AWS_ORANGE)  # SFN → SQS
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ROW 3 — AgentCore Harness group  (y=11.8)
-# ══════════════════════════════════════════════════════════════════════════════
-HX, HY, HW, HH = 1.0, 12.0, 18.0, 5.6
-group(ax, HX, HY, HW, HH,
-      "AgentCore Harness — Travel Disruption Agent",
-      fc=LIGHT_TEAL, ec=AWS_TEAL, header_fc=AWS_TEAL)
+# ── AgentCore Harness group  y=11.5 ──────────────────────────────────────────
+HX, HY, HW, HH = 0.9, 11.5, 20.2, 7.0
+group_header(ax, HX, HY, HW, HH,
+             "AgentCore Harness — Travel Disruption Agent",
+             fc=LIGHT_TEAL, ec=AWS_TEAL, header_fc=AWS_TEAL)
 
 # SQS → Harness
-varrow(ax, 5.5 + SW/2, R2Y, HY + HH,
+varrow(ax, CX[1]+SW/2, R2Y, HY+HH,
        label="Invoke Harness\n(runtimeSessionId)", color=AWS_TEAL, lw=2.2, lo=(0.2,0))
 
-# Core row
-CR_Y = 15.5
-service_box(ax, 2.0,  CR_Y, SW+0.4, SH, "ORCH", AWS_TEAL,
-            "Orchestrator Agent", "Claude Sonnet 4.6\nStrands Agent Loop",
-            fc=WHITE, ec=AWS_TEAL)
-service_box(ax, 6.2,  CR_Y, SW+0.4, SH, "MEM",  AWS_TEAL,
-            "AgentCore Memory", "Short + Long-term\nPassenger Context",
-            fc=WHITE, ec=AWS_TEAL)
-service_box(ax, 10.4, CR_Y, SW+0.4, SH, "VM",   AWS_TEAL,
-            "Isolated microVM", "per Session\nAgentCore Runtime",
-            fc=WHITE, ec=AWS_TEAL)
+# Core row  y=16.0
+CR_Y = 16.0
+service_card(ax, 1.5,  CR_Y, SW+0.4, SH, "bedrock",
+             "Orchestrator Agent", "Claude Sonnet 4.6", "Strands Agent Loop",
+             fc=WHITE, ec=AWS_TEAL, accent=AWS_TEAL)
+service_card(ax, 5.6,  CR_Y, SW+0.4, SH, "memory",
+             "AgentCore Memory", "Short + Long-term", "Passenger Context",
+             fc=WHITE, ec=AWS_TEAL, accent=AWS_TEAL)
+service_card(ax, 9.7,  CR_Y, SW+0.4, SH, "runtime",
+             "Isolated microVM", "per Session", "AgentCore Runtime",
+             fc=WHITE, ec=AWS_TEAL, accent=AWS_TEAL)
 
-harrow(ax, 4.4, 6.2, CR_Y + SH/2,
+harrow(ax, 1.5+SW+0.4, 5.6, CR_Y+SH/2,
        label="Read/Write Context", color=AWS_TEAL)
 
-# Tool row — aligned with integration row columns
+# Tool row  y=13.2
 TR_Y = 13.2
-service_box(ax, 2.0,  TR_Y, SW, SH, "FLT",  AWS_PURPLE,
-            "Flight Agent", "Rebook Flight\nGDS API",
-            fc=LIGHT_PURPLE, ec=AWS_PURPLE)
-service_box(ax, 7.0,  TR_Y, SW, SH, "NTF",  AWS_PURPLE,
-            "Notify Agent", "SMS / Email\n/ Push",
-            fc=LIGHT_PURPLE, ec=AWS_PURPLE)
-service_box(ax, 11.5, TR_Y, SW, SH, "ESC",  AWS_RED,
-            "Inline Function", "Human-in-Loop\nEscalation",
-            fc="#FFF0F0", ec=AWS_RED)
+service_card(ax, 1.5,  TR_Y, SW, SH, "lambda",
+             "Flight Agent", "Rebook Flight", "GDS API",
+             fc=LIGHT_PURPLE, ec=AWS_PURPLE, accent=AWS_PURPLE)
+service_card(ax, 8.2,  TR_Y, SW, SH, "lambda",
+             "Notify Agent", "SMS / Email", "/ Push",
+             fc=LIGHT_PURPLE, ec=AWS_PURPLE, accent=AWS_PURPLE)
+service_card(ax, 12.1, TR_Y, SW, SH, "inline_fn",
+             "Inline Function", "Human-in-Loop", "Escalation",
+             fc="#FFF0F0", ec=AWS_RED, accent=AWS_RED)
 
 # Orchestrator → tools
-varrow(ax, 2.0 + SW/2,    CR_Y, TR_Y + SH, color=AWS_PURPLE, lw=1.8)
-varrow(ax, 7.0 + SW/2,    CR_Y, TR_Y + SH, color=AWS_PURPLE, lw=1.8)
-diagonal_arrow(ax, 2.0 + SW/2, CR_Y, 11.5 + SW/2, TR_Y + SH,
-               label="tool_use", color=AWS_RED, lw=1.8, lo=(2.0, 0.1))
+varrow(ax, 1.5+SW/2,  CR_Y, TR_Y+SH, color=AWS_PURPLE, lw=1.8)
+varrow(ax, 8.2+SW/2,  CR_Y, TR_Y+SH, color=AWS_PURPLE, lw=1.8)
+darrow(ax, 1.5+SW/2, CR_Y, 12.1+SW/2, TR_Y+SH,
+       label="tool_use", color=AWS_RED, lw=1.8, lo=(2.0, 0.1))
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ROW 4 — Integration layer  (y=9.5)
-# ══════════════════════════════════════════════════════════════════════════════
-IR_Y = 9.5
+# ── Integration row  y=8.8 ───────────────────────────────────────────────────
+IR_Y = 8.8
 
-# Integration row — 5 boxes evenly spaced across width 1.2 to 19.0
-# Box positions: GW=1.5, DDB=4.6, SNS=7.7, SM=10.8, OBS=13.9
-# Gateway group box covers GW+DDB
-rbox(ax, 1.2, IR_Y - 0.2, 6.8, SH + 0.7, fc="#E8F8F5", ec=AWS_TEAL, lw=1.5, r=0.2, z=2)
-ax.text(1.5, IR_Y + SH + 0.25, "AgentCore Gateway  ·  MCP / AWS_IAM",
-        ha='left', va='center', fontsize=7.5, color=AWS_TEAL, fontweight='bold', zorder=3)
+# Gateway group box
+rbox(ax, 0.8, IR_Y-0.3, 7.3, SH+0.8, fc="#E8F8F5", ec=AWS_TEAL, lw=1.5, r=0.2, z=2)
+ax.text(1.1, IR_Y+SH+0.3, "AgentCore Gateway  ·  MCP / AWS_IAM",
+        ha='left', va='center', fontsize=8, color=AWS_TEAL, fontweight='bold', zorder=3)
 
-service_box(ax, 1.5,  IR_Y, SW, SH, "GW",  AWS_TEAL,
-            "AgentCore\nGateway", "SigV4 / OAuth",
-            fc=WHITE, ec=AWS_TEAL)
-service_box(ax, 4.6,  IR_Y, SW, SH, "DDB", AWS_GREEN,
-            "Amazon\nDynamoDB", "Passenger Profiles",
-            fc=WHITE, ec=AWS_GREEN)
-service_box(ax, 7.7,  IR_Y, SW, SH, "SNS", AWS_ORANGE,
-            "Amazon SNS", "Traveler\nNotifications",
-            fc=LIGHT_ORANGE, ec=AWS_ORANGE)
-service_box(ax, 10.8, IR_Y, SW, SH, "SM",  AWS_RED,
-            "Secrets\nManager", "API Keys / Token Vault",
-            fc="#FFF0F0", ec=AWS_RED)
-service_box(ax, 13.9, IR_Y, SW, SH, "OBS", AWS_TEAL,
-            "AgentCore\nObservability", "Unified Trace View",
-            fc=LIGHT_TEAL, ec=AWS_TEAL)
+service_card(ax, 1.0,  IR_Y, SW, SH, "gateway",
+             "AgentCore Gateway", "SigV4 / OAuth",
+             fc=WHITE, ec=AWS_TEAL, accent=AWS_TEAL)
+service_card(ax, 4.6,  IR_Y, SW, SH, "dynamodb",
+             "Amazon DynamoDB", "Passenger Profiles",
+             fc=WHITE, ec=AWS_GREEN, accent=AWS_GREEN)
+service_card(ax, 8.2,  IR_Y, SW, SH, "sns",
+             "Amazon SNS", "Traveler Notifications",
+             fc=LIGHT_ORANGE, ec=AWS_ORANGE, accent=AWS_ORANGE)
+service_card(ax, 11.8, IR_Y, SW, SH, "secrets",
+             "Secrets Manager", "API Keys / Token Vault",
+             fc="#FFF0F0", ec=AWS_RED, accent=AWS_RED)
+service_card(ax, 15.4, IR_Y, SW, SH, "observability",
+             "AgentCore Observability", "Unified Trace View",
+             fc=LIGHT_TEAL, ec=AWS_TEAL, accent=AWS_TEAL)
 
-# Tools → Integration (straight down — Flight→GW, Notify→SNS)
-varrow(ax, 2.0 + SW/2, TR_Y, IR_Y + SH, color=AWS_TEAL,   lw=1.8)
-varrow(ax, 7.0 + SW/2, TR_Y, IR_Y + SH, color=AWS_ORANGE, lw=1.8)
+# Tools → Integration
+varrow(ax, 1.5+SW/2, TR_Y, IR_Y+SH, color=AWS_TEAL, lw=1.8)    # Flight → GW
+varrow(ax, 8.2+SW/2, TR_Y, IR_Y+SH, color=AWS_ORANGE, lw=1.8)  # Notify → SNS
 
-# Integration row horizontal connections
-harrow(ax, 4.1, 4.6,  IR_Y + SH/2, color=AWS_GREEN)          # GW → DDB
-harrow(ax, 7.2, 7.7,  IR_Y + SH/2, color=AWS_ORANGE)         # DDB → SNS
-harrow(ax, 10.3, 10.8, IR_Y + SH/2, color=AWS_RED)           # SNS → SM
-harrow(ax, 13.4, 13.9, IR_Y + SH/2, color=AWS_TEAL)          # SM → OBS
+# Integration row horizontal
+harrow(ax, 1.0+SW, 4.6, IR_Y+SH/2, color=AWS_GREEN)    # GW → DDB
+harrow(ax, 4.6+SW, 8.2, IR_Y+SH/2, color=AWS_ORANGE)   # DDB → SNS
+harrow(ax, 8.2+SW, 11.8, IR_Y+SH/2, color=AWS_RED)     # SNS → SM
+harrow(ax, 11.8+SW, 15.4, IR_Y+SH/2, color=AWS_TEAL)   # SM → Obs
 
-# Harness → Observability (auto-trace diagonal)
-diagonal_arrow(ax, 11.5 + SW/2, TR_Y, 13.9 + SW/2, IR_Y + SH,
-               label="Auto-traced", color=AWS_TEAL, lw=1.8, lo=(0.5, 0.1))
+# Auto-trace diagonal from harness to Observability
+darrow(ax, 12.1+SW/2, TR_Y, 15.4+SW/2, IR_Y+SH,
+       label="Auto-traced", color=AWS_TEAL, lw=1.8, lo=(0.4, 0.1))
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ROW 5 — CloudWatch  (y=7.2)
-# ══════════════════════════════════════════════════════════════════════════════
-OB_Y = 7.2
-service_box(ax, 12.6, OB_Y, SW + 0.8, SH, "CW", AWS_ORANGE,
-            "Amazon\nCloudWatch", "Logs & Metrics",
-            fc=LIGHT_ORANGE, ec=AWS_ORANGE)
+# ── CloudWatch  y=6.3 ────────────────────────────────────────────────────────
+CW_Y = 6.3
+service_card(ax, 14.0, CW_Y, SW+0.8, SH, "cloudwatch",
+             "Amazon CloudWatch", "Logs & Metrics",
+             fc=LIGHT_ORANGE, ec=AWS_ORANGE, accent=AWS_ORANGE)
 
-varrow(ax, 13.9 + SW/2, IR_Y, OB_Y + SH, color=AWS_ORANGE, lw=1.8)
+varrow(ax, 15.4+SW/2, IR_Y, CW_Y+SH, color=AWS_ORANGE, lw=1.8)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LEGEND
-# ══════════════════════════════════════════════════════════════════════════════
-LX, LY = 1.0, 5.5
-rbox(ax, LX, LY, 18, 1.6, fc=WHITE, ec=BORDER_GREY, lw=1.2, r=0.2, z=2)
-ax.text(LX + 0.3, LY + 1.35, "Legend", ha='left', va='center',
+# ── Legend ────────────────────────────────────────────────────────────────────
+LY = 4.5
+rbox(ax, 0.8, LY, 20.4, 1.6, fc=WHITE, ec=BORDER_GREY, lw=1.2, r=0.2, z=2)
+ax.text(1.1, LY+1.38, "Legend", ha='left', va='center',
         fontsize=9, fontweight='bold', color=AWS_DARK, zorder=3)
 
 legend_entries = [
     (AWS_TEAL,   LIGHT_TEAL,   "AgentCore: Harness / Gateway / Memory / Observability"),
     (AWS_PURPLE, LIGHT_PURPLE, "Lambda Tools: Flight Agent, Notify Agent"),
-    (AWS_RED,    "#FFF0F0",    "Inline Function: Human-in-Loop Escalation"),
-    (AWS_ORANGE, LIGHT_ORANGE, "AWS Services: EventBridge, SQS, SNS, CloudWatch"),
+    (AWS_RED,    "#FFF0F0",    "Inline Function: Human-in-Loop"),
+    (AWS_ORANGE, LIGHT_ORANGE, "AWS: EventBridge, SQS, SNS, CloudWatch"),
     (AWS_GREEN,  WHITE,        "Amazon DynamoDB"),
 ]
-lxi = LX + 0.3
+lxi = 1.1
 for ec_c, fc_c, lbl in legend_entries:
-    rbox(ax, lxi, LY + 0.55, 0.35, 0.38, fc=fc_c, ec=ec_c, lw=1.8, r=0.08, z=3)
-    ax.text(lxi + 0.5, LY + 0.74, lbl, ha='left', va='center',
-            fontsize=7.8, color=TEXT_MID, zorder=3)
-    lxi += 3.55
+    rbox(ax, lxi, LY+0.52, 0.38, 0.40, fc=fc_c, ec=ec_c, lw=2.0, r=0.08, z=3)
+    ax.text(lxi+0.54, LY+0.72, lbl, ha='left', va='center',
+            fontsize=8, color=TEXT_MID, zorder=3)
+    lxi += 4.0
 
-# ══════════════════════════════════════════════════════════════════════════════
-# KEY FACTS BAR
-# ══════════════════════════════════════════════════════════════════════════════
-KY = 3.8
-rbox(ax, 1.0, KY, 18, 1.4, fc=AWS_DARK, ec=AWS_DARK, lw=0, r=0.25, z=2)
+# ── Key facts bar ─────────────────────────────────────────────────────────────
+KY = 2.8
+rbox(ax, 0.8, KY, 20.4, 1.4, fc=AWS_DARK, ec=AWS_DARK, lw=0, r=0.25, z=2)
 facts = [
-    ("~8 sec", "Recovery time\nper passenger"),
+    ("~8 sec",  "Recovery time\nper passenger"),
     ("0 lines", "Orchestration\ncode written"),
     ("microVM", "Isolated session\nper passenger"),
     ("30 days", "Memory retention\n(AgentCore)"),
-    ("100%", "Decisions\nauditable"),
+    ("100%",    "Decisions\nauditable"),
 ]
-fx = 2.0
+fx = 2.2
 for val, lbl in facts:
-    ax.text(fx, KY + 0.95, val, ha='center', va='center',
+    ax.text(fx, KY+0.95, val, ha='center', va='center',
             fontsize=14, fontweight='bold', color=AWS_ORANGE, zorder=3)
     for i, line in enumerate(lbl.split('\n')):
-        ax.text(fx, KY + 0.52 - i*0.22, line, ha='center', va='center',
+        ax.text(fx, KY+0.52-i*0.22, line, ha='center', va='center',
                 fontsize=7.5, color="#AAAAAA", zorder=3)
-    if fx < 17:
-        ax.plot([fx + 1.55, fx + 1.55], [KY + 0.2, KY + 1.15],
-                color="#444444", lw=1, zorder=3)
-    fx += 3.5
+    if fx < 19:
+        ax.plot([fx+1.7, fx+1.7], [KY+0.18, KY+1.18], color="#444444", lw=1, zorder=3)
+    fx += 3.9
 
-# ══════════════════════════════════════════════════════════════════════════════
-# FOOTER
-# ══════════════════════════════════════════════════════════════════════════════
-ax.text(10, 3.0, "github.com/weraponge/travel-disruption-agentcore   ·   "
+# ── Footer ────────────────────────────────────────────────────────────────────
+ax.text(11, 2.1, "github.com/weraponge/travel-disruption-agentcore   ·   "
                  "Built on Amazon Bedrock AgentCore Harness",
-        ha='center', va='center', fontsize=8.5, color=TEXT_MID, fontstyle='italic',
-        zorder=2)
+        ha='center', va='center', fontsize=9, color=TEXT_MID,
+        fontstyle='italic', zorder=2)
 
 # ── Save ──────────────────────────────────────────────────────────────────────
 plt.tight_layout(pad=0.2)
